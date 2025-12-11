@@ -43,7 +43,7 @@ agbenchmark = { path = "../benchmark", optional = true }
 benchmark = ["agbenchmark"]
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.12.1"
+black = ">=23.12.1,<25.0.0"
 flake8 = "^7.0.0"
 isort = "^5.13.1"
 pre-commit = "*"
