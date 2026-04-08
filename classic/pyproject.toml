@@ -37,7 +37,7 @@ direct-benchmark = "direct_benchmark.__main__:main"
 python = "^3.12"
 
 # Core networking & web
-aiohttp = "^3.8.5"
+aiohttp = "^3.13.4"
 beautifulsoup4 = "^4.12.2"
 requests = "*"
 trafilatura = "^2.0"
@@ -53,13 +53,13 @@ tiktoken = ">=0.7.0,<1.0.0"
 fastapi = "^0.109.1"
 hypercorn = "^0.14.4"
 uvicorn = { extras = ["standard"], version = ">=0.23.2,<1" }
-python-multipart = "^0.0.7"
+python-multipart = "^0.0.22"
 
 # Data processing
 charset-normalizer = "^3.1.0"
 demjson3 = "^3.0.0"
 jsonschema = "*"
-orjson = "^3.8.10"
+orjson = "^3.11.6"
 pydantic = "^2.7.2"
 pyyaml = "^6.0"
 toml = "^0.10.2"
@@ -78,7 +78,7 @@ prompt-toolkit = "^3.0.0"
 rich = "^13.0"
 
 # Document processing
-pypdf = "^3.1.0"
+pypdf = "^6.9.2"
 python-docx = "*"
 pylatexenc = "*"
 Pillow = "*"
@@ -111,7 +111,7 @@ pytest = "^8.0"
 
 [tool.poetry.group.dev.dependencies]
 # Formatting & linting
-black = "^24.10.0"
+black = "^26.3.1"
 flake8 = "^7.0.0"
 isort = "^5.13.1"
 pre-commit = "^3.3.3"
