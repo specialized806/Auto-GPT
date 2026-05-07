@@ -932,12 +932,6 @@ export default class BackendAPI {
       throw error;
     }
 
-    if (
-      response.status === 204 ||
-      response.headers.get("Content-Length") === "0"
-    ) {
-      return null;
-    }
     return await response.json();
   }
 
