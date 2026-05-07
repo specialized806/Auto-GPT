@@ -51,7 +51,8 @@ from ..constants import (
     COPILOT_ERROR_PREFIX,
     COPILOT_RETRYABLE_ERROR_PREFIX,
     FRIENDLY_TRANSIENT_MSG,
-    STOPPED_BY_USER_MARKER,
+    STREAM_INCOMPLETE_MARKER,
+    STREAM_LOCK_PREFIX,
     is_transient_api_error,
 )
 from ..session_cleanup import prune_orphan_tool_calls
@@ -101,6 +102,7 @@ from ..response_model import (
     StreamStatus,
     StreamTextDelta,
     StreamTextEnd,
+    StreamTextStart,
     StreamToolInputAvailable,
     StreamToolInputStart,
     StreamToolOutputAvailable,
@@ -1572,9 +1574,6 @@ _SWEEP_INTERVAL_SECONDS = 300  # 5 minutes
 # Heartbeat interval — keep SSE alive through proxies/LBs during tool execution.
 # IMPORTANT: Must be less than frontend timeout (12s in useCopilotPage.ts)
 _HEARTBEAT_INTERVAL = 10.0  # seconds
-
-
-STREAM_LOCK_PREFIX = "copilot:stream:lock:"
 
 
 async def _safe_close_sdk_client(
@@ -3172,7 +3171,8 @@ async def _run_stream_attempt(
 
     Opens a `ClaudeSDKClient`, sends the query, iterates SDK messages with
     heartbeat timeouts, dispatches adapter responses, and performs post-stream
-    cleanup (safety-net flush, stopped-by-user handling).
+    cleanup (safety-net flush, CLI-side end-of-stream notice when the
+    iterator drains without a ``ResultMessage``).
 
     Yields stream events.  On stream error the exception propagates to the
     caller so the retry loop can rollback and retry.
@@ -3357,16 +3357,24 @@ async def _run_stream_attempt(
             yield response
 
     if not acc.stream_completed and not loop_state.ended_with_stream_error:
+        # User cancels raise ``asyncio.CancelledError`` upstream; reaching this
+        # branch means the CLI hung up — per-query budget exhausted, max_turns,
+        # OOM, or crash — without ever emitting a ResultMessage.
         logger.info(
-            "%s Stream ended without ResultMessage (stopped by user)",
+            "%s Stream ended without ResultMessage — likely CLI-side kill "
+            "(budget/turns/crash)",
             ctx.log_prefix,
         )
         closing_responses: list[StreamBaseResponse] = []
         state.adapter._end_text_if_open(closing_responses)
         for r in closing_responses:
             yield r
+        notice_block_id = str(uuid.uuid4())
+        yield StreamTextStart(id=notice_block_id)
+        yield StreamTextDelta(id=notice_block_id, delta=STREAM_INCOMPLETE_MARKER)
+        yield StreamTextEnd(id=notice_block_id)
         ctx.session.messages.append(
-            ChatMessage(role="assistant", content=STOPPED_BY_USER_MARKER)
+            ChatMessage(role="assistant", content=STREAM_INCOMPLETE_MARKER)
         )
 
     if (
