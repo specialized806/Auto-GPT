@@ -380,6 +380,7 @@ class DatabaseManager(AppService):
 
     # ============ CoPilot Chat Sessions ============ #
     get_chat_session = _(chat_db.get_chat_session)
+    get_chat_session_metadata = _(chat_db.get_chat_session_metadata)
     create_chat_session = _(chat_db.create_chat_session)
     update_chat_session = _(chat_db.update_chat_session)
     add_chat_message = _(chat_db.add_chat_message)
@@ -605,6 +606,7 @@ class DatabaseManagerAsyncClient(AppServiceClient):
 
     # ============ CoPilot Chat Sessions ============ #
     get_chat_session = d.get_chat_session
+    get_chat_session_metadata = d.get_chat_session_metadata
     create_chat_session = d.create_chat_session
     update_chat_session = d.update_chat_session
     add_chat_message = d.add_chat_message
