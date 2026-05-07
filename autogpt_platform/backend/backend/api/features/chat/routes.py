@@ -1148,6 +1148,11 @@ async def stream_chat_post(
                 yield StreamFinish().to_sse()
                 return
 
+            # Flush a heartbeat immediately so the client knows the
+            # connection is live — without this the first event arrives
+            # only after the _stream_listener's first xread (up to 5 s).
+            yield StreamHeartbeat().to_sse()
+
             # Read from the subscriber queue and yield to SSE
             logger.info(
                 "[TIMING] Starting to read from subscriber_queue",
