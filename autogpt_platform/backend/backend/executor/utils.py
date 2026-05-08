@@ -11,6 +11,7 @@ from pydantic import BaseModel, JsonValue, ValidationError
 
 from backend.blocks import get_block
 from backend.blocks._base import Block, BlockCostType, BlockType
+from backend.copilot.rate_limit import UserPaywalledError, is_user_paywalled
 from backend.data import execution as execution_db
 from backend.data import graph as graph_db
 from backend.data import human_review as human_review_db
@@ -1156,6 +1157,8 @@ async def add_graph_execution(
     execution_context: Optional[ExecutionContext] = None,
     graph_exec_id: Optional[str] = None,
     dry_run: bool = False,
+    *,
+    bypass_paywall: bool = False,
 ) -> GraphExecutionWithNodes:
     """
     Adds a graph execution to the queue and returns the execution entry.
@@ -1175,12 +1178,31 @@ async def add_graph_execution(
         nodes_input_masks: Node inputs to use in the execution.
         parent_graph_exec_id: The ID of the parent graph execution (for nested executions).
         graph_exec_id: If provided, resume this existing execution instead of creating a new one.
+        bypass_paywall: Skip the per-user paywall check. Set ONLY for admin
+            recovery paths (requeueing stuck executions on behalf of a user
+            who may be on NO_TIER) — never for user-initiated runs.
     Returns:
         GraphExecutionWithNodes: The execution entry.
     Raises:
         ValueError: If the graph is not found or if there are validation errors.
         NotFoundError: If graph_exec_id is provided but execution is not found.
+        UserPaywalledError: If the user is on NO_TIER and ``ENABLE_PLATFORM_PAYMENT``
+            is on for them, **unless** ``bypass_paywall=True``. Raised here
+            so every entry point — HTTP routes, scheduled cron, webhook
+            triggers, external API, internal copilot tools — gets the same
+            gate without each having to remember a route-level dependency.
+        Exception: Tier-lookup errors propagate as-is. The HTTP routes that
+            call into ``add_graph_execution`` already wrap with
+            ``enforce_payment_paywall`` upstream (which maps lookup failure
+            to 503), so by the time we get here those callers have a fresh
+            check. Background callers (scheduled jobs, webhook handlers,
+            copilot tool runs) catch the exception in their own retry
+            framework — failing now is preferable to silently giving a
+            paywalled user a free run during an outage.
     """
+    if not bypass_paywall and await is_user_paywalled(user_id):
+        raise UserPaywalledError("A subscription is required to run agents.")
+
     if prisma.is_connected():
         edb = execution_db
         udb = user_db
