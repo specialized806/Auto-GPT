@@ -28,6 +28,7 @@ import {
   CircleNotch,
   DownloadSimpleIcon,
   DotsThree,
+  HourglassIcon,
   PencilSimpleIcon,
   PlusCircleIcon,
   PlusIcon,
@@ -378,7 +379,31 @@ export function ChatSidebar() {
                               {formatDate(session.updated_at)}
                             </Text>
                           </div>
-                          {session.is_processing &&
+                          {session.chat_status === "running" && (
+                            <span
+                              aria-label="Session running"
+                              title="Running"
+                              data-testid="session-status-running"
+                              className="inline-flex h-4 w-4 shrink-0 items-center justify-center"
+                            >
+                              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+                            </span>
+                          )}
+                          {session.chat_status === "queued" && (
+                            <span
+                              aria-label="Session queued"
+                              title="Queued"
+                              data-testid="session-status-queued"
+                              className="inline-flex h-4 w-4 shrink-0 items-center justify-center text-purple-600"
+                            >
+                              <HourglassIcon
+                                className="h-3.5 w-3.5"
+                                weight="bold"
+                              />
+                            </span>
+                          )}
+                          {session.chat_status !== "running" &&
+                            session.is_processing &&
                             shouldShowSessionProcessingIndicator({
                               sessionId: session.id,
                               currentSessionId: sessionId,
